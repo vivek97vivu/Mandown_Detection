@@ -1,0 +1,125 @@
+
+cameras:
+  - id: cam_1
+    source: 0
+    name: "Site Entry Camera"
+    enabled: true
+    use_gstreamer: false
+
+  - id: cam_2
+    source: "rtsp://admin:diffuse123@192.168.0.183:554/cam/realmonitor?channel=1&subtype=0"
+    name: "Construction Zone Camera"
+    enabled: true
+    use_gstreamer: true
+    codec: "h265"
+    protocols: "tcp"
+    latency: 0
+    drop_on_latency: true
+
+models:
+  yolo:
+    path: "models/yolo/yolo26s.engine"
+    input_size: 640
+    conf_threshold: 0.40
+    iou_threshold: 0.45
+    use_tracking: true
+    crop_padding: 0.15
+
+
+  pose:
+      path: "/media/algosium/SSD/vivek/mandown_detection/models/pose/rtmpose-m.onnx"
+      backend: "rtmlib"
+      input_size: [192, 256]
+      min_kp_score: 0.30
+
+device:
+  inference: "cuda"
+  fp16: true
+
+decision:
+  angle_upright_max: 30.0
+  angle_fallen_min: 60.0
+  aspect_upright_max: 0.55
+  aspect_fallen_min: 0.80
+  head_height_fallen_min: 0.45
+  min_keypoints: 6
+  min_detection_conf: 0.35
+  weight_angle: 0.40
+  weight_aspect: 0.25
+  weight_head: 0.15
+  weight_lower_body: 0.10
+  weight_symmetry: 0.10
+  fallen_score_threshold: 0.55
+  crouching_score_threshold: 0.30
+
+temporal:
+  dwell_frames: 75
+  recovery_frames: 50
+  score_ema_alpha: 0.35
+  max_unseen_frames: 60
+  crouching_as_fallen: false
+
+alert:
+  snapshot_dir: "alerts/snapshots"
+  pose_confirm_dir: "alerts/pose_confirm"
+  video_clip_dir: "alerts/video_clips"
+  save_snapshot: true
+  save_video_clip: true
+  clip_pre_frames: 50
+  clip_post_frames: 75
+  jpeg_quality: 85
+  video_fps: 25.0
+  video_codec: "MJPG"
+  snapshot_cooldown_s: 10.0
+
+drawing:
+  kp_radius: 5
+  kp_min_score: 0.30
+  limb_thickness: 3
+  bbox_thickness: 2
+  show_track_id: true
+  show_score: true
+  show_state: true
+  font_scale: 0.65
+  font_thickness: 2
+  small_font_scale: 0.50
+  banner_height: 56
+  banner_alpha: 0.80
+  flash_hz: 2.0
+  show_fps: true
+  show_frame_idx: true
+  hud_margin: 10
+
+stream:
+  reconnect_delay_s: 3.0
+  max_reconnect_attempts: 0
+  frame_timeout_s: 5.0
+  display: true
+  display_scale: 1.0
+
+zones:
+  - name: "confined_space_entry"
+    enabled: false
+    polygon:
+      - [0.10, 0.20]
+      - [0.40, 0.20]
+      - [0.40, 0.90]
+      - [0.10, 0.90]
+
+  - name: "rotating_equipment"
+    enabled: false
+    polygon:
+      - [0.55, 0.10]
+      - [0.90, 0.10]
+      - [0.90, 0.60]
+      - [0.55, 0.60]
+
+logging:
+  log_dir: "logs"
+  level: "INFO"
+  enable_json: false
+  max_bytes: 10485760
+  backup_count: 5
+
+worker:
+  log_interval_frames: 100
