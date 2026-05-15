@@ -1,3 +1,6 @@
+# ============================================================
+#  Man-Down Detection — Master Configuration
+# ============================================================
 
 cameras:
   - id: cam_1
@@ -20,45 +23,59 @@ models:
   yolo:
     path: "models/yolo/yolo26s.engine"
     input_size: 640
-    conf_threshold: 0.40
+    conf_threshold: 0.45
     iou_threshold: 0.45
     use_tracking: true
     crop_padding: 0.15
 
-
   pose:
-      path: "/media/algosium/SSD/vivek/mandown_detection/models/pose/rtmpose-m.onnx"
-      backend: "rtmlib"
-      input_size: [192, 256]
-      min_kp_score: 0.30
+    path: "models/pose/rtmpose-m.onnx"
+    backend: "rtmlib"
+    input_size: [192, 256]
+    min_kp_score: 0.30
 
 device:
   inference: "cuda"
   fp16: true
 
+# ── Decision ─────────────────────────────────────────────────
 decision:
-  angle_upright_max: 30.0
-  angle_fallen_min: 60.0
-  aspect_upright_max: 0.55
-  aspect_fallen_min: 0.80
-  head_height_fallen_min: 0.45
-  min_keypoints: 6
-  min_detection_conf: 0.35
-  weight_angle: 0.40
-  weight_aspect: 0.25
-  weight_head: 0.15
-  weight_lower_body: 0.10
-  weight_symmetry: 0.10
-  fallen_score_threshold: 0.55
-  crouching_score_threshold: 0.30
+  # Body angle
+  angle_upright_max: 35.0
+  angle_fallen_min: 75.0           # very horizontal only
 
+  # Aspect ratio — seated person behind desk has wide bbox
+  # Only fire when bbox is wider than tall (truly lying flat)
+  aspect_upright_max: 0.80         # generous — seated is ~0.5-0.7
+  aspect_fallen_min: 1.20          # only fire when wider than tall
+
+  head_height_fallen_min: 0.60
+
+  min_keypoints: 8                 # require 8+ joints — partial bodies skip
+  min_detection_conf: 0.45
+
+  # Min person size — ignore tiny detections (heads peeking over partition)
+  # As fraction of frame height. 0.15 = person must be >15% of frame height
+  min_bbox_height_ratio: 0.15      # NEW — skip detections smaller than this
+
+  weight_angle:      0.50          # angle is most reliable
+  weight_aspect:     0.10          # aspect very unreliable for partial bodies
+  weight_head:       0.20
+  weight_lower_body: 0.12
+  weight_symmetry:   0.08
+
+  fallen_score_threshold:    0.70  # very strict
+  crouching_score_threshold: 0.45
+
+# ── Temporal ─────────────────────────────────────────────────
 temporal:
-  dwell_frames: 75
-  recovery_frames: 50
-  score_ema_alpha: 0.35
+  dwell_frames: 150                # 6s @25fps — must stay flat for 6 full seconds
+  recovery_frames: 75
+  score_ema_alpha: 0.20            # very smooth — ignore brief spikes
   max_unseen_frames: 60
   crouching_as_fallen: false
 
+# ── Alerts ───────────────────────────────────────────────────
 alert:
   snapshot_dir: "alerts/snapshots"
   pose_confirm_dir: "alerts/pose_confirm"
@@ -70,8 +87,9 @@ alert:
   jpeg_quality: 85
   video_fps: 25.0
   video_codec: "MJPG"
-  snapshot_cooldown_s: 10.0
+  snapshot_cooldown_s: 30.0        # 30s between repeat alerts per track
 
+# ── Drawing ──────────────────────────────────────────────────
 drawing:
   kp_radius: 5
   kp_min_score: 0.30
@@ -90,6 +108,7 @@ drawing:
   show_frame_idx: true
   hud_margin: 10
 
+# ── Stream ────────────────────────────────────────────────────
 stream:
   reconnect_delay_s: 3.0
   max_reconnect_attempts: 0
@@ -97,22 +116,7 @@ stream:
   display: true
   display_scale: 1.0
 
-zones:
-  - name: "confined_space_entry"
-    enabled: false
-    polygon:
-      - [0.10, 0.20]
-      - [0.40, 0.20]
-      - [0.40, 0.90]
-      - [0.10, 0.90]
-
-  - name: "rotating_equipment"
-    enabled: false
-    polygon:
-      - [0.55, 0.10]
-      - [0.90, 0.10]
-      - [0.90, 0.60]
-      - [0.55, 0.60]
+zones: []
 
 logging:
   log_dir: "logs"

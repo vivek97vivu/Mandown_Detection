@@ -304,7 +304,7 @@ def _draw_alert_banner(
 
     # Warning icon  ▐ ⚠ ▌  + message
     ids_str = ", ".join(f"#{i}" for i in sorted(alerting_ids))
-    msg     = f"  \u26A0  MAN DOWN DETECTED  |  Track {ids_str}  |  ALERT ACTIVE  \u26A0  "
+    msg     = f"  !!  MAN DOWN DETECTED  |  Track {ids_str}  |  ALERT ACTIVE  !!  "
 
     (tw, th), _ = cv2.getTextSize(msg, cfg.font, 0.80, 2)
     tx = max(0, (w - tw) // 2)

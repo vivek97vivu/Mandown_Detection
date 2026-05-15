@@ -361,6 +361,7 @@ class PoseEstimator:
         bbox: Tuple[int, int, int, int],
         crop_shape: Tuple[int, ...],
         frame_shape: Tuple[int, ...],
+
     ) -> np.ndarray:
         """
         Map keypoints from crop-local coords to full-frame pixel coords.

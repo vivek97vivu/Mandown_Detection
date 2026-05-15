@@ -81,6 +81,10 @@ class DecisionConfig:
     # Minimum YOLO detection confidence to run pose analysis
     min_detection_conf: float = 0.35
 
+    # Minimum bbox height as fraction of frame height
+    # Filters out tiny partial-body detections (heads above partitions)
+    min_bbox_height_ratio: float = 0.15
+
     # Weights for weighted-average score computation
     weight_angle:      float = 0.40
     weight_aspect:     float = 0.25
@@ -126,6 +130,15 @@ class DecisionEngine:
         # ── Guard: insufficient data ───────────────────────────────────
         if pose.confidence < self.cfg.min_detection_conf:
             return self._uncertain(pose.track_id, metrics, "low detection confidence")
+
+        # Skip tiny detections — heads peeking above partitions, distant people
+        # We don't have frame_h here so use bbox absolute height heuristic
+        x1, y1, x2, y2 = pose.bbox
+        bbox_h = y2 - y1
+        bbox_w = x2 - x1
+        # If bbox is very small (< 60px tall) it's likely a partial detection
+        if bbox_h < 60:
+            return self._uncertain(pose.track_id, metrics, f"bbox too small ({bbox_h}px tall)")
 
         if metrics["kp_visible_count"] < self.cfg.min_keypoints:
             return self._uncertain(

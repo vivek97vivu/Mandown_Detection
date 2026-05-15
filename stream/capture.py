@@ -91,9 +91,22 @@ class CameraCapture:
         if cam.use_gstreamer:
             self._cap = build_gstreamer_capture(cam)
         else:
-            self._cap = cv2.VideoCapture(cam.source)
-            # Tune buffer for low-latency live feed
-            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            if isinstance(cam.source, int):
+                # Try backends in order: V4L2 → any
+                # V4L2 + MJPG gives lowest latency on Linux USB cams
+                self._cap = cv2.VideoCapture(cam.source, cv2.CAP_V4L2)
+                if not self._cap.isOpened():
+                    logger.warning("[%s] V4L2 failed, trying default backend.", cam.id)
+                    self._cap = cv2.VideoCapture(cam.source)
+                # Set MJPEG to avoid USB bandwidth issues causing black frames
+                self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+                self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+                # Flush stale frames — USB cams buffer frames during open()
+                for _ in range(5):
+                    self._cap.grab()
+            else:
+                self._cap = cv2.VideoCapture(cam.source)
+                self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         if not self._cap.isOpened():
             logger.error("[%s] Failed to open capture.", cam.id)

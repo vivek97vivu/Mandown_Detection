@@ -1,33 +1,3 @@
-"""
-benchmark.py
-------------
-Full pipeline latency and throughput benchmark for Jetson deployment.
-
-Measures wall-clock time for each pipeline stage independently and combined:
-  Stage 1 — YOLO detection
-  Stage 2 — RTMPose keypoint estimation
-  Stage 3 — Skeleton geometry (decision)
-  Stage 4 — Drawing / overlay
-  Total   — end-to-end latency per frame
-
-Also measures:
-  - GPU memory usage before / after model load (nvidia-smi)
-  - Sustained FPS over a configurable run duration
-  - FPS degradation under multiple-person load (1, 2, 4, 8 persons)
-  - Thermal throttle detection (FPS drop > 20% mid-run)
-
-Outputs a benchmark report to terminal and saves results/benchmark.json.
-
-Usage
------
-    python test/benchmark.py                      # default: 500 frames, 1080p dummy
-    python test/benchmark.py --frames 1000
-    python test/benchmark.py --resolution 1920 1080
-    python test/benchmark.py --resolution 1280 720
-    python test/benchmark.py --video path/to/clip.mp4   # use real video
-    python test/benchmark.py --no-pose            # YOLO only
-    python test/benchmark.py --save-report        # write results/benchmark.json
-"""
 
 from __future__ import annotations
 
