@@ -1,23 +1,35 @@
-# ============================================================
-#  Man-Down Detection — Master Configuration
-# ============================================================
 
 cameras:
   - id: cam_1
     source: 0
-    name: "Site Entry Camera"
+    name: "Brio Webcam"
     enabled: true
     use_gstreamer: false
 
   - id: cam_2
-    source: "rtsp://admin:diffuse123@192.168.0.183:554/cam/realmonitor?channel=1&subtype=0"
-    name: "Construction Zone Camera"
+    source: "rtsp://admin:diffuse123@192.168.0.183:554/cam/realmonitor?channel=1&subtype=2"
+    name: "LOREX"
     enabled: true
     use_gstreamer: true
     codec: "h265"
     protocols: "tcp"
     latency: 0
     drop_on_latency: true
+    playback_fps: 0
+
+  # - id: cam_video
+  #   source: "/home/algosium/Downloads/Falling from height_1080p.mp4"
+  #   name: "Video Test"
+  #   enabled: true
+  #   use_gstreamer: false
+  #   playback_fps: 25.0 
+
+  # - id: cam_image
+  #   source: "/home/algosium/Downloads/imagy-split-image-2026-05-18/ChatGPT Image May 18, 2026, 12_44_27 PM_r4_c5.png"    # path to your image
+  #   name: "Image Test"
+  #   enabled: true
+  #   use_gstreamer: false
+  #   playback_fps: 1.0  
 
 models:
   yolo:
@@ -40,32 +52,34 @@ device:
 
 # ── Decision ─────────────────────────────────────────────────
 decision:
-  # Body angle
-  angle_upright_max: 35.0
-  angle_fallen_min: 75.0           # very horizontal only
+  # Body angle from vertical
+  # Leaning at desk = ~50-60°. Truly fallen = 80-90°.
+  angle_upright_max: 40.0
+  angle_fallen_min: 78.0           # near-horizontal only
 
-  # Aspect ratio — seated person behind desk has wide bbox
-  # Only fire when bbox is wider than tall (truly lying flat)
-  aspect_upright_max: 0.80         # generous — seated is ~0.5-0.7
-  aspect_fallen_min: 1.20          # only fire when wider than tall
+  # Bbox aspect ratio (width/height)
+  # Standing person: ~0.4-0.6. Fallen person: >1.2 (wider than tall)
+  aspect_upright_max: 0.85
+  aspect_fallen_min: 1.30          # must be clearly wider than tall
 
-  head_height_fallen_min: 0.60
+  # Head must be very low in bbox to confirm fallen
+  head_height_fallen_min: 0.65
 
-  min_keypoints: 8                 # require 8+ joints — partial bodies skip
+  # Require hips + legs visible (enforced in code — partial bodies rejected)
+  min_keypoints: 9                 # need torso AND lower body joints
   min_detection_conf: 0.45
+  min_bbox_height_ratio: 0.15
+  min_kp_visible_score: 0.25       # threshold for body-part visibility guards
 
-  # Min person size — ignore tiny detections (heads peeking over partition)
-  # As fraction of frame height. 0.15 = person must be >15% of frame height
-  min_bbox_height_ratio: 0.15      # NEW — skip detections smaller than this
+  # Weight lower body heavily — it's the definitive fallen signal
+  weight_angle:      0.35
+  weight_aspect:     0.10
+  weight_head:       0.15
+  weight_lower_body: 0.30          # hips at ankle level = strong fallen signal
+  weight_symmetry:   0.10
 
-  weight_angle:      0.50          # angle is most reliable
-  weight_aspect:     0.10          # aspect very unreliable for partial bodies
-  weight_head:       0.20
-  weight_lower_body: 0.12
-  weight_symmetry:   0.08
-
-  fallen_score_threshold:    0.70  # very strict
-  crouching_score_threshold: 0.45
+  fallen_score_threshold:    0.72  # strict
+  crouching_score_threshold: 0.50
 
 # ── Temporal ─────────────────────────────────────────────────
 temporal:

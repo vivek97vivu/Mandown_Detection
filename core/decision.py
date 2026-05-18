@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
 
-from core.pose import PoseResult
+from core.pose import PoseResult, KP
 from core import skeleton
 
 logger = logging.getLogger(__name__)
@@ -82,8 +82,10 @@ class DecisionConfig:
     min_detection_conf: float = 0.35
 
     # Minimum bbox height as fraction of frame height
-    # Filters out tiny partial-body detections (heads above partitions)
     min_bbox_height_ratio: float = 0.15
+
+    # Minimum keypoint score to consider a joint 'visible' for body-part guards
+    min_kp_visible_score: float = 0.25
 
     # Weights for weighted-average score computation
     weight_angle:      float = 0.40
@@ -131,14 +133,38 @@ class DecisionEngine:
         if pose.confidence < self.cfg.min_detection_conf:
             return self._uncertain(pose.track_id, metrics, "low detection confidence")
 
-        # Skip tiny detections — heads peeking above partitions, distant people
-        # We don't have frame_h here so use bbox absolute height heuristic
+        # ── Guard: bbox too small (head peeking over partition) ──────────
         x1, y1, x2, y2 = pose.bbox
         bbox_h = y2 - y1
         bbox_w = x2 - x1
-        # If bbox is very small (< 60px tall) it's likely a partial detection
-        if bbox_h < 60:
-            return self._uncertain(pose.track_id, metrics, f"bbox too small ({bbox_h}px tall)")
+        if bbox_h < 80:
+            return self._uncertain(pose.track_id, metrics, f"bbox too small ({bbox_h}px)")
+
+        # ── Guard: lower body not visible ─────────────────────────────────
+        # CRITICAL: Cannot confirm fallen if we can't see hips + legs.
+        # Leaning forward at a desk looks identical to falling without lower body.
+        # Require at least one hip AND one knee/ankle to be visible.
+        hip_visible = (
+            pose.kp_scores[KP["left_hip"]]  >= self.cfg.min_kp_visible_score or
+            pose.kp_scores[KP["right_hip"]] >= self.cfg.min_kp_visible_score
+        )
+        leg_visible = (
+            pose.kp_scores[KP["left_knee"]]   >= self.cfg.min_kp_visible_score or
+            pose.kp_scores[KP["right_knee"]]  >= self.cfg.min_kp_visible_score or
+            pose.kp_scores[KP["left_ankle"]]  >= self.cfg.min_kp_visible_score or
+            pose.kp_scores[KP["right_ankle"]] >= self.cfg.min_kp_visible_score
+        )
+        if not hip_visible:
+            return self._uncertain(pose.track_id, metrics, "hips not visible — partial body")
+        if not leg_visible:
+            return self._uncertain(pose.track_id, metrics, "legs not visible — partial body")
+
+        # ── Guard: bbox aspect ratio pre-filter ───────────────────────────
+        # Person sitting at desk: body cut at waist → bbox is roughly square
+        # A genuinely fallen person bbox is always wider than tall (ratio > 1.0)
+        # If bbox is tall (portrait), person is definitely NOT lying flat
+        if bbox_w > 0 and (bbox_h / bbox_w) > 1.8:
+            return self._upright(pose.track_id, metrics, "tall bbox — clearly standing/sitting")
 
         if metrics["kp_visible_count"] < self.cfg.min_keypoints:
             return self._uncertain(
@@ -262,6 +288,16 @@ class DecisionEngine:
         return DecisionResult(
             track_id=track_id,
             state=PersonState.UNCERTAIN,
+            score=0.0,
+            reason=reason,
+            metrics=metrics,
+        )
+
+    def _upright(self, track_id: int, metrics: dict, reason: str) -> DecisionResult:
+        """Return explicit UPRIGHT when geometric guard rules out fallen."""
+        return DecisionResult(
+            track_id=track_id,
+            state=PersonState.UPRIGHT,
             score=0.0,
             reason=reason,
             metrics=metrics,

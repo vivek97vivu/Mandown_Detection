@@ -144,9 +144,12 @@ class TemporalFilter:
         alpha = cfg.score_ema_alpha
         track.smoothed_score = alpha * result.score + (1 - alpha) * track.smoothed_score
 
-        is_fallen = result.state == PersonState.FALLEN or (
-            cfg.crouching_as_fallen and result.state == PersonState.CROUCHING
-        )
+        is_fallen = result.state == PersonState.FALLEN
+
+        # or (
+        #     cfg.crouching_as_fallen and result.state == PersonState.CROUCHING            #if crouching needed
+        # )
+
         is_upright = result.state == PersonState.UPRIGHT
 
         prev_state = track.alert_state
