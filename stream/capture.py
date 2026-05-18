@@ -70,6 +70,7 @@ class CameraCapture:
         self._last_frame_ts:  float = 0.0
         self._frame_count:    int   = 0
         self._is_open:        bool  = False
+        self._last_read_ts:   float = 0.0
 
     # ── Lifecycle ─────────────────────────────────────────────────────
 
@@ -153,6 +154,19 @@ class CameraCapture:
                 self.cam_cfg.id, elapsed, self.stream_cfg.frame_timeout_s,
             )
             return False, None
+
+        # ── Playback rate limiting (video files only) ────────────────────
+        # For live cameras playback_fps=0 (disabled).
+        # For video files, throttle to match source FPS so video plays at
+        # real speed instead of as-fast-as-GPU-can-go.
+        playback_fps = getattr(self.cam_cfg, 'playback_fps', 0)
+        if playback_fps > 0:
+            target_interval = 1.0 / playback_fps
+            now = time.monotonic()
+            elapsed_since_last = now - self._last_read_ts
+            if elapsed_since_last < target_interval:
+                time.sleep(target_interval - elapsed_since_last)
+            self._last_read_ts = time.monotonic()
 
         ret, frame = self._cap.read()
 

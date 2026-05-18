@@ -79,7 +79,7 @@ class PersonDetector:
             raise FileNotFoundError(f"YOLO weights not found: {self.model_path}")
 
         logger.info("Loading YOLO model from %s (fp16=%s)", self.model_path, self._use_fp16)
-        self._model = YOLO(str(self.model_path))
+        self._model = YOLO(str(self.model_path), task="detect")
 
         # Warm-up pass — critical on Jetson to avoid first-frame latency spike
         dummy = np.zeros((self.input_size, self.input_size, 3), dtype=np.uint8)

@@ -1,33 +1,4 @@
-"""
-reconnect.py
-------------
-Auto-reconnecting stream loop with exponential backoff.
 
-Wraps CameraCapture and calls the provided frame_callback on every
-successfully read frame. On read failure or timeout, automatically
-retries opening the capture with backoff.
-
-Design
-------
-- max_reconnect_attempts = 0  → retry forever (default, suitable for
-  unattended construction / oil & gas deployment).
-- Exponential backoff: delay doubles on each failed attempt, capped at
-  max_delay_s (default 60s) to avoid hammering an offline camera.
-- Calls an optional on_reconnect callback so worker.py can reset the
-  FPS counter and alert state on reconnect.
-- Runs in the calling thread — wrap in threading.Thread in main.py
-  if running multiple cameras concurrently.
-
-Usage
------
-    def process(frame, cam_id):
-        annotated = worker.process_frame(frame)
-        show(annotated)
-
-    loop = ReconnectLoop(cam_cfg, stream_cfg, frame_callback=process)
-    loop.run()          # blocks until stopped or max attempts exceeded
-    loop.stop()         # call from another thread to stop gracefully
-"""
 
 from __future__ import annotations
 

@@ -1,24 +1,3 @@
-"""
-alert.py
---------
-Alert output handler for man-down events.
-
-Handles the two configured outputs for this deployment:
-  1. Snapshot save — saves a timestamped JPEG + metadata JSON to disk.
-  2. Video clip save — buffers recent frames and writes a short MP4 clip
-     around the moment of the fall (pre-event + post-event buffer).
-
-On-screen overlay is handled by utils/drawing.py (called from worker.py),
-not here. This module handles I/O only.
-
-Jetson notes
-------------
-- JPEG quality 85 is a good balance of size vs quality on Jetson eMMC/SSD.
-- Video clips are written via cv2.VideoWriter (MJPG codec).
-  For better compression, swap to 'mp4v' if ffmpeg is available.
-- All disk I/O is synchronous — in production, move to a background thread
-  (see worker.py's alert queue) to avoid blocking the inference loop.
-"""
 
 from __future__ import annotations
 

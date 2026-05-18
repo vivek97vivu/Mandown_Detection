@@ -53,6 +53,7 @@ class CameraConfig:
     protocols:        str  = "tcp"
     latency:          int  = 0
     drop_on_latency:  bool = True
+    playback_fps:     float = 0.0   # 0 = no limit (live cam). Set to 25.0 for video files
 
 
 # ── Zone config dataclass ─────────────────────────────────────────────
@@ -217,6 +218,7 @@ def _load_cameras(raw: list) -> List[CameraConfig]:
             protocols       = _str(entry.get("protocols", "tcp")),
             latency         = int(entry.get("latency", 0)),
             drop_on_latency = bool(entry.get("drop_on_latency", True)),
+            playback_fps    = float(entry.get("playback_fps", 0.0)),
         ))
 
     enabled = [c for c in cameras if c.enabled]

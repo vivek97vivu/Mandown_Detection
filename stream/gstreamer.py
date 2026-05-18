@@ -1,17 +1,4 @@
-"""
-gstreamer.py
-------------
-Builds and opens GStreamer pipelines for RTSP streams.
 
-Auto-detects the best available H264/H265 decoder:
-  Priority order:
-    1. Jetson hardware (nvh265dec / nvh264dec)   — Jetson only
-    2. NVIDIA GPU NVDEC (nvdec)                  — x86 with NVIDIA GPU
-    3. VA-API (vaapih265dec / vaapih264dec)       — Intel/AMD iGPU on Linux
-    4. Software libav (avdec_h265 / avdec_h264)  — universal CPU fallback
-
-All pipeline parameters come from CameraConfig — nothing hardcoded.
-"""
 
 from __future__ import annotations
 
